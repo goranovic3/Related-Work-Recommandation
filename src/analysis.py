@@ -137,25 +137,32 @@ def univariate_analysis(df, column):
         print(f"Summary Statistics for {column}:")
         print(df[column].describe())
         
-        # Histogram
         fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+        
+        # log scal
         sns.histplot(df[column], kde=True, ax=ax[0])
-        ax[0].set_title(f"Histogram of {column}")
+        ax[0].set_title(f"Histogram of {column} (Log Scale)")
+        ax[0].set_xscale('log')  #scale
+        
         sns.boxplot(x=df[column], ax=ax[1])
-        ax[1].set_title(f"Boxplot of {column}")
+        ax[1].set_title(f"Boxplot of {column} (Log Scale)")
+        ax[1].set_xscale('log')  
+        
+        plt.tight_layout()
         plt.show()
         
     elif pd.api.types.is_categorical_dtype(df[column]) or df[column].dtype == 'object':
         print(f"Value Counts for {column}:")
         print(df[column].value_counts())
         
-        # Visualization: Bar Chart
+        # Bar Chart for categorical data
         plt.figure(figsize=(8, 5))
         sns.countplot(x=df[column], order=df[column].value_counts().index)
         plt.title(f"Bar Chart of {column}")
         plt.xticks(rotation=45)
         plt.show()
     return
+
 
 def plot_correlation_matrix(df, figsize=(10, 8), cmap='coolwarm', annot=True, title='Correlation Matrix'):
     numeric_df = df.select_dtypes(include=['int64', 'float64'])

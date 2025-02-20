@@ -2,6 +2,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
+import json  # <-- import json to parse string embeddings
 from sklearn.manifold import TSNE
 import dash
 from dash import dcc, html, Input, Output
@@ -11,6 +12,11 @@ import os
 class TSNEVisualization:
     def __init__(self, df, title="T-SNE Embedding Visualization"):
         """Initializes the T-SNE visualization class."""
+
+        # Ensure that the abstract_embeddings column is a list of floats rather than strings
+        if df["abstract_embeddings"].apply(lambda x: isinstance(x, str)).any():
+            df["abstract_embeddings"] = df["abstract_embeddings"].apply(json.loads)
+        
         self.df = self._perform_tsne(df)
         self.title = title
         self.app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LUX])

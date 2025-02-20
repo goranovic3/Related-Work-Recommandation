@@ -61,43 +61,55 @@ class DataPreprocessor:
         print(f"Saved as '{full_path}'")
 
     @staticmethod
+
     def process_dataframe_references(df: pd.DataFrame) -> pd.DataFrame:
-        """Process and filter references in the DataFrame."""
+        """Process and filter references in the DataFrame.
         
+        Keeps only rows where all references are valid (appear in the 'id' column).
+        """
+        
+        # Convert references from string to list if needed, stripping whitespace first.
         df['references'] = df['references'].apply(
-            lambda x: ast.literal_eval(x) if isinstance(x, str) and x.startswith("[") else x
+            lambda x: ast.literal_eval(x.strip()) if isinstance(x, str) and x.strip().startswith("[") else x
         )
         
+        # Ensure that references is a list; if not, replace with an empty list.
         df['references'] = df['references'].apply(lambda x: x if isinstance(x, list) else [])
         
-        paper_ids = set(df['id'].dropna().astype(str))
+        # Normalize paper IDs: strip extra whitespace.
+        paper_ids = set(x.strip() for x in df['id'].dropna().astype(str))
         
         print("Sample references:", df['references'].head())
         print("Paper IDs sample:", list(paper_ids)[:10])
         
         def filter_existing_references(ref_list):
-            """Keep only references present in the dataset."""
+            """Return the list of references only if all references are present in the dataset.
+            
+            If the list is empty or if any reference is invalid, return np.nan.
+            """
             if not ref_list:
                 return np.nan
-            valid_refs = [ref.strip() for ref in ref_list if ref.strip() in paper_ids]
-            return valid_refs if valid_refs else np.nan
+            # Clean and check each reference.
+            cleaned_refs = [str(ref).strip() for ref in ref_list]
+            # Check if every reference in the cleaned list is in the set of valid paper_ids.
+            if all(ref in paper_ids for ref in cleaned_refs):
+                return cleaned_refs
+            else:
+                return np.nan
         
+        # Apply the filtering function.
         df['filtered_references'] = df['references'].apply(filter_existing_references)
+        
+        # Remove rows where not all references are valid.
         df = df[df['filtered_references'].notna()]
         
-        df['filtered_references'] = df['filtered_references'].apply(lambda x: x if isinstance(x, list) else [])
+        total_papers_with_refs = df['references'].apply(lambda x: len(x) > 0).sum()
+        papers_with_all_valid_refs = df['filtered_references'].apply(lambda x: isinstance(x, list) and len(x) > 0).sum()
         
-        total_papers_with_refs = df['references'].apply(lambda x: x != []).sum()
-        papers_with_some_refs = df['filtered_references'].apply(bool).sum()
-        
-        print(f"Number of papers with at least some valid references: {papers_with_some_refs}/{total_papers_with_refs}")
-        
-        df['venue'] = df['venue'].fillna('')
-        conference_papers = df[df['venue'].str.contains("conference", case=False, na=False)]
-        
-        print(f"Number of papers presented at a conference: {len(conference_papers)}")
+        print(f"Number of papers with all valid references: {papers_with_all_valid_refs} / {total_papers_with_refs}")
         
         return df
+
 
     @staticmethod
     def format_abstracts(df: pd.DataFrame) -> pd.DataFrame:
